@@ -1,0 +1,110 @@
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="/style.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <h1>Local Serveur</h1>
+
+        <div id="app">
+            <form @submit.prevent="uploadFiles" enctype="multipart/form-data">
+                <p>Envoyer un fichier :</p>
+                <input type="file" ref="fileInput" name="files" multiple>
+                <button type="submit">Upload</button>
+            </form>
+
+            <button @click="togglePreviewMode">
+                {{ previewMode ? 'Mode Liste' : 'Mode Prévisualisation' }}
+              </button>
+            
+              <h1>Liste des fichiers</h1>
+              <ul v-if="!previewMode" class="file-list">
+                <li v-for="file in fileList" :key="file">
+                  <a :href="getFileLink(file)" :download="file">{{ file }}</a>
+                </li>
+              </ul>
+              <div v-else class="file-preview">
+                <div v-for="file in fileList" :key="file" class="file-item">
+                  <img v-if="isImageFile(file)" :src="getFileLink(file)" alt="Prévisualisation de l'image" />
+                  <video v-if="isVideoFile(file)" :src="getFileLink(file)"></video>
+                  <p>{{ file }}</p>
+                </div>
+              </div>
+
+            <div id="popup" v-show="showPopup">
+                <div class="popup-content">
+                  <span class="close-btn" @click="closePopup">&times;</span>
+                  <p>Fichier envoyé</p>
+                </div>
+              </div>
+        </div>
+        
+          <script src="https://unpkg.com/vue"></script>
+          <script>
+            const app = Vue.createApp({
+                data() {
+                    return {
+                    showPopup: false,
+                    fileList: [],
+                    previewMode: false
+                    };
+                },
+                created() {
+                    this.fetchFiles();
+                },
+                methods: {
+                    uploadFiles() {
+                        const files = this.$refs.fileInput.files;
+                        const formData = new FormData();
+                        Array.from(files).forEach(file => {
+                            formData.append('files', file);
+                        });
+
+                        fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => {
+                            console.log("File uploaded");
+                            this.showPopup = true;
+                        })
+                        .catch(error => {
+                            // Gérer les erreurs
+                        });
+                    },
+                    closePopup() {
+                        this.showPopup = false;
+                    },
+                    fetchFiles() {
+                        fetch("/files")
+                            .then(response => response.json())
+                            .then(data => {
+                                this.fileList = data.files;
+                            })
+                            .catch(error => {
+                            console.error("Erreur lors de la récupération des fichiers", error);
+                        });
+                    },
+                    getFileLink(file) {
+                       return `/download/${file}`;
+                    },
+                    isImageFile(file) {
+                        const imageExtensions = [".jpg", ".jpeg", ".png", ".gif"];
+                        const extension = file.substring(file.lastIndexOf(".")).toLowerCase();
+                        return imageExtensions.includes(extension);
+                    },
+                    isVideoFile(file){
+                        const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".m4v"];
+                        const extension = file.substring(file.lastIndexOf(".")).toLowerCase();
+                        return videoExtensions.includes(extension);
+                    },
+                    togglePreviewMode(){
+                        this.previewMode = !this.previewMode;
+                    }
+                }
+            });
+
+            app.mount('#app');
+          </script>
+    </body>
+</html>
